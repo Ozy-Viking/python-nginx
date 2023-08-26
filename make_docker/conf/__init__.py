@@ -1,7 +1,7 @@
-import os
-from pathlib import Path
-import sys
 import importlib
+import os
+import sys
+from pathlib import Path
 
 
 class Setting:

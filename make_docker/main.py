@@ -6,11 +6,13 @@ import click
 from icecream import ic
 from loguru import logger
 
-# from make_docker.conf import setting
-
 import make_docker.settings as setting
+
 from .nginx import fetch_nginx_dockerfiles
 from .templates import build_dockerfiles
+
+# from make_docker.conf import setting
+
 
 BASE_PATH: Path = Path(__file__).parent.parent
 BUILD_PATH: Path = BASE_PATH / "build"
@@ -38,7 +40,10 @@ BUILD_PATH: Path = BASE_PATH / "build"
     help=f"Base OS for container. Default: {setting.OS_CHOICES[0]}",
     type=click.Choice(setting.OS_CHOICES),
 )
-def main(*args, **options) -> int:
+@click.option('-a', '--all', help='All combinations',  is_flag=True)
+def main(all: bool, *args, **options) -> int:
+    if all:
+        options = setting.ALL
     fetch_nginx_dockerfiles(**options)
     build_dockerfiles(**options)
     return 0

@@ -1,23 +1,23 @@
-from glob import glob, iglob
-from pathlib import Path
+"""
+Todo: Fix up the mapping to be inline with the update.sh.
+"""
 import re
 import shutil
+from glob import glob
+from glob import iglob
+from pathlib import Path
+from string import Template
+from typing import Generator, Iterable
+
 from icecream import ic
 from loguru import logger
-from string import Template
 
 from make_docker.conf import BUILD_PATH
 from make_docker.conf import NGINX_BUILD
 from make_docker.conf import setting
-from make_docker.templates.base import ENDING, FROM_TEMPLATE, LOCALE_FIX
-
-OS_MAP: dict[str, str] = {
-    "bookworm": "debian",
-    "bullseye": "debian",
-    "debian": "debian",
-    "alpine": "alpine",
-    "all": "all",
-}
+from make_docker.templates.base import ENDING
+from make_docker.templates.base import FROM_TEMPLATE
+from make_docker.templates.base import LOCALE_FIX
 
 
 def validate_input(nginx, os, python):
@@ -33,31 +33,54 @@ def validate_input(nginx, os, python):
         )
 
 
+def generate_enumations(
+    nginx: str, os: str, python: str
+) -> Generator[tuple[str, str, str], None, None]:
+    nginx_options = setting.NGINX_ALL if nginx == "all" else [nginx]  # type: ignore
+    os_options = setting.OS_ALL if os == "all" else [os]  # type: ignore
+    python_options = setting.PYTHON_ALL if python == "all" else [python]  # type: ignore
+
+    for i_n, nginx in enumerate(nginx_options):
+        for i_o, os in enumerate(os_options):
+            for i_p, python in enumerate(python_options):
+                yield (nginx, os, python)
+
+
 def main(*, nginx, os, python, **options) -> int:
-    if nginx == "all":
-        raise ValueError("nginx != all")
     try:
-        validate_input(nginx, os, python)
-        match OS_MAP[os]:
-            case "debian":
-                make_folders(nginx, os)
-                py_tag = f"{python}-{setting.OS_VERSION_MAP[nginx]}"
-                make_dockerfile(nginx, os, tag=py_tag)
-                copy_entrypoints(nginx, os)
-            case _:
-                raise NotImplementedError(f"OS: {os} is not avaible yet.")
+        # validate_input(nginx, os, python)
+        generate_enumations(nginx, os, python)
+        for nginx, os, python in generate_enumations(nginx, os, python):
+            builder(nginx, os, python)
     except NotImplementedError as error:
         logger.exception(str(error), exception=error)
     return 0
 
 
-def make_folders(nginx, os):
-    folder_path: Path = (BUILD_PATH / nginx) / os
+def builder(nginx, os, python):
+    path = "/".join((nginx, os, python))
+    make_folders(nginx, os, python)
+
+    if setting.OS_MAP[os] == "debian":  # type: ignore
+        py_tag = f"{python}-{setting.DEBIAN_VERSION_MAP[nginx]}"  # type: ignore
+    elif setting.OS_MAP[os] == "alpine":  # type: ignore
+        py_tag = f"{python}-alpine{setting.ALPINE_VERSION_MAP[nginx]}"  # type: ignore
+    else:
+        raise NotImplementedError(
+            f"This combination has not been impletmented: {(nginx, os, python)}"
+        )
+
+    make_dockerfile(nginx, os, python, py_tag)
+    copy_entrypoints(nginx, os, path)
+
+
+def make_folders(nginx, os, python):
+    folder_path: Path = ((BUILD_PATH / nginx) / os) / python
     folder_path.mkdir(exist_ok=True, parents=True)
 
 
 def starts_with_list(
-    line: str, matches: list[str] = setting.NGINX_BOTTOM_CUT_LINES
+    line: str, matches: list[str] = setting.NGINX_BOTTOM_CUT_LINES  # type: ignore
 ) -> bool:
     for comparison in matches:
         if line.startswith(comparison):
@@ -65,14 +88,14 @@ def starts_with_list(
     return False
 
 
-def make_dockerfile(nginx, os, tag, *, python="python", **kwargs):
+def make_dockerfile(nginx, os, python, tag, **kwargs):
     dockerfile: str = ""
     dockerfile = Template(FROM_TEMPLATE).substitute(
-        {"image": python, "tag": tag, "name": "AS python-build"}
+        {"image": "python", "tag": tag, "name": "AS python-build"}
     )
 
-    dockerfile_folder = f"{nginx}/{os}"
-    nginx_build_path = NGINX_BUILD / dockerfile_folder
+    dockerfile_folder = f"{nginx}/{os}/{python}"
+    nginx_build_path = NGINX_BUILD / f"{nginx}/{setting.OS_MAP[os]}"  # type: ignore
     nginx_dockerfile_path = nginx_build_path / "Dockerfile"
     with open(nginx_dockerfile_path, "r") as f:
         nginx_dockerfile = f.readlines()
@@ -85,7 +108,9 @@ def make_dockerfile(nginx, os, tag, *, python="python", **kwargs):
         elif starts_with_list(line):
             cut_line_bottom.append(idx)
 
-    dockerfile += "".join(nginx_dockerfile[cut_line_top + 1 : min(cut_line_bottom)])
+    cut_line_bottom_idx = min(cut_line_bottom) if len(cut_line_bottom) else None
+
+    dockerfile += "".join(nginx_dockerfile[cut_line_top + 1 : cut_line_bottom_idx])
     dockerfile += LOCALE_FIX
     dockerfile += ENDING
 
@@ -95,9 +120,9 @@ def make_dockerfile(nginx, os, tag, *, python="python", **kwargs):
     logger.success(f"{dockerfile_folder} Dockerfile made.")
 
 
-def copy_entrypoints(nginx, os):
-    from_dir = (NGINX_BUILD / nginx) / os
-    to_dir = (BUILD_PATH / nginx) / os
+def copy_entrypoints(nginx, os, path):
+    from_dir = (NGINX_BUILD / nginx) / setting.OS_MAP[os]  # type: ignore
+    to_dir = BUILD_PATH / path
     entrypoints_re = re.compile(r"^((?!Dockerfile).*)$")
     ifiles = iglob("*", root_dir=str(from_dir))
     for file in [x for x in ifiles if entrypoints_re.match(x)]:
@@ -105,4 +130,4 @@ def copy_entrypoints(nginx, os):
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(**{"nginx": "mainline", "os": "debian", "python": "3.11"}))
+    raise SystemExit(main(**{"nginx": "all", "os": "all", "python": "all"}))
