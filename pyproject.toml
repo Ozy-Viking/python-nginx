@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "python-nginx"
+version = "0.1.0"
+description = "Pulls the docker files from each then combines and generates a single container."
+authors = ["Zack Hankin <admin@hankin.io>"]
+license = "MIT"
+readme = "README.md"
+packages = [{ include = "make_docker" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+loguru = "^0.7.0"
+tqdm = "^4.66.1"
+icecream = "^2.1.3"
+click = "^8.1.7"
+requests = "^2.31.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.7.0"
+pytest = "^7.4.0"
+isort = "^5.12.0"
+
+[tool.poetry.group.docs.dependencies]
+mkdocs = "^1.5.2"
+
+[tool.poetry.scripts]
+makedocker = 'make_docker:main.main'
+
+
+[tool.isort]
+force_single_line = true
+profile = "black"
+sections = "FUTURE,STDLIB,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
