@@ -34,9 +34,9 @@ jobs:
             os: bookworm
           - nginx: mainline
             os: bullseye
+          - os: alpine
     runs-on: ubuntu-latest
-    
-
+  
     steps:
       - name: "Checkout Branch: ${{ github.ref_name }}"
         id: build_checkout
