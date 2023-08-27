@@ -25,6 +25,7 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         nginx: [mainline, stable]
         os: [bookworm, alpine, bullseye]
@@ -36,7 +37,6 @@ jobs:
             os: bullseye
           - os: alpine
     runs-on: ubuntu-latest
-  
     steps:
       - name: "Checkout Branch: ${{ github.ref_name }}"
         id: build_checkout
@@ -78,7 +78,7 @@ jobs:
             ${{env.REGISTRY}}/${{env.GITHUB_IMAGE}}
             ${{env.DOCKER_IMAGE}}
           tags: |
-            latest
+            ${{ ((matrix.os == env.MAIN_OS)&&(matrix.nginx == env.MAIN_NGINX)&&(matrix.python == env.MAIN_PYTHON)) && 'latest' }}
             ${{ ((matrix.os == env.MAIN_OS)&&(matrix.nginx == env.MAIN_NGINX)) && matrix.python }}
             ${{ ((matrix.nginx == env.MAIN_NGINX)&&(matrix.python == env.MAIN_PYTHON)) && matrix.os }}
             ${{ ((matrix.os == env.MAIN_OS)&&(matrix.python == env.MAIN_PYTHON)) && matrix.nginx }}
