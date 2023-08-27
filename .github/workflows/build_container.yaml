@@ -93,6 +93,9 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
+          platforms: linux/amd64
           context: build/${{ matrix.nginx }}/${{ matrix.os }}/${{ matrix.python }}
           tags: |
             ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
