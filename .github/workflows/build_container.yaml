@@ -9,7 +9,7 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 0 * * *'  
+    - cron: "0 0 * * *"
 
 env:
   GITHUB_IMAGE: ozy-viking/python-nginx
@@ -78,12 +78,12 @@ jobs:
             ${{env.REGISTRY}}/${{env.GITHUB_IMAGE}}
             ${{env.DOCKER_IMAGE}}
           tags: |
-            ${{ ((matrix.os == env.MAIN_OS)&&(matrix.nginx == env.MAIN_NGINX)&&(matrix.python == env.MAIN_PYTHON)) && 'latest' }}
-            ${{ ((matrix.os == env.MAIN_OS)&&(matrix.nginx == env.MAIN_NGINX)) && matrix.python }}
-            ${{ ((matrix.nginx == env.MAIN_NGINX)&&(matrix.python == env.MAIN_PYTHON)) && matrix.os }}
-            ${{ ((matrix.os == env.MAIN_OS)&&(matrix.python == env.MAIN_PYTHON)) && matrix.nginx }}
-            ${{ matrix.python }}-${{ matrix.nginx }}-${{ matrix.os }}
-      
+            type=raw,enable=${{(matrix.os == env.MAIN_OS)&&(matrix.nginx == env.MAIN_NGINX)&&(matrix.python == env.MAIN_PYTHON)}},value=latest
+            type=raw,enable=${{(matrix.os == env.MAIN_OS)&&(matrix.nginx == env.MAIN_NGINX)}},value=${{ matrix.python }}
+            type=raw,enable=${{(matrix.nginx == env.MAIN_NGINX)&&(matrix.python == env.MAIN_PYTHON)}},value=${{ matrix.os }}
+            type=raw,enable=${{(matrix.os == env.MAIN_OS)&&(matrix.python == env.MAIN_PYTHON)}},value=${{ matrix.nginx }}
+            type=raw,enable=true,value=${{ matrix.python }}-${{ matrix.nginx }}-${{ matrix.os }}
+
       - name: check output
         run: echo "${{steps.meta.outputs.tags}}"
       - name: Set up Docker Buildx
