@@ -9,7 +9,8 @@ on:
       - main
 
 env:
-  IMAGE: ozyviking/python-nginx
+  GITHUB_IMAGE: ozy-viking/python-nginx
+  DOCKER_IMAGE: ozyviking/python-nginx
   REGISTRY: ghcr.io
   MAIN_NGINX: "mainline"
   MAIN_PYTHON: "3.11"
@@ -53,6 +54,12 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Docker
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Container Meta
         id: meta
@@ -60,7 +67,8 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            ${{env.REGISTRY}}/${{env.IMAGE}}
+            ${{env.REGISTRY}}/${{env.GITHUB_IMAGE}}
+            ${{env.DOCKER_IMAGE}}
           # generate Docker tags based on the following events/attributes
           tags: |
             latest
