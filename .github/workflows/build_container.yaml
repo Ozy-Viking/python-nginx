@@ -47,7 +47,6 @@ jobs:
       - name: Make dockerfiles
         run: makedocker --python ${{ matrix.python }} --nginx ${{ matrix.nginx }} --os ${{ matrix.os }}
 
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -73,7 +72,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           push: true
-          context: build/${{ matrix.nginx }}/${{ matrix.os }}
+          context: build/${{ matrix.nginx }}/${{ matrix.os }}/${{ matrix.python }}
           tags: |
             ${{ ((matrix.os == env.MAIN_OS)&&(matrix.nginx == env.MAIN_NGINX)&&(matrix.python == env.MAIN_PYTHON)) && matrix.python }}
             ${{ ((matrix.os == env.MAIN_OS)&&(matrix.nginx == env.MAIN_NGINX)&&(matrix.python == env.MAIN_PYTHON)) && matrix.os }}
