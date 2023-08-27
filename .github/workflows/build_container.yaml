@@ -1,12 +1,15 @@
 name: Build and Publish Containers
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
   pull_request:
     branches:
       - main
+  schedule:
+    - cron: '0 0 * * *'  
 
 env:
   GITHUB_IMAGE: ozy-viking/python-nginx
@@ -15,18 +18,24 @@ env:
   MAIN_NGINX: "mainline"
   MAIN_PYTHON: "3.11"
   MAIN_OS: "bookworm"
+permissions:
+  contents: write
+  packages: write
 
 jobs:
   build:
     strategy:
       matrix:
-        python: [3.11]
-        nginx: [mainline]
-        os: [bookworm]
+        nginx: [mainline, stable]
+        os: [bookworm, alpine, bullseye]
+        python: ["3.11", "3.10", "3.9"]
+        exclude:
+          - nginx: stable
+            os: bookworm
+          - nginx: mainline
+            os: bullseye
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
+    
 
     steps:
       - name: "Checkout Branch: ${{ github.ref_name }}"
@@ -65,18 +74,18 @@ jobs:
         id: meta
         uses: docker/metadata-action@v4
         with:
-          # list of Docker images to use as base name for tags
           images: |
             ${{env.REGISTRY}}/${{env.GITHUB_IMAGE}}
             ${{env.DOCKER_IMAGE}}
-          # generate Docker tags based on the following events/attributes
           tags: |
             latest
-            ${{ ((matrix.os == env.MAIN_OS)&&(matrix.nginx == env.MAIN_NGINX)&&(matrix.python == env.MAIN_PYTHON)) && matrix.python }}
-            ${{ ((matrix.os == env.MAIN_OS)&&(matrix.nginx == env.MAIN_NGINX)&&(matrix.python == env.MAIN_PYTHON)) && matrix.os }}
-            ${{ ((matrix.os == env.MAIN_OS)&&(matrix.nginx == env.MAIN_NGINX)&&(matrix.python == env.MAIN_PYTHON)) && matrix.nginx }}
+            ${{ ((matrix.os == env.MAIN_OS)&&(matrix.nginx == env.MAIN_NGINX)) && matrix.python }}
+            ${{ ((matrix.nginx == env.MAIN_NGINX)&&(matrix.python == env.MAIN_PYTHON)) && matrix.os }}
+            ${{ ((matrix.os == env.MAIN_OS)&&(matrix.python == env.MAIN_PYTHON)) && matrix.nginx }}
             ${{ matrix.python }}-${{ matrix.nginx }}-${{ matrix.os }}
-
+      
+      - name: check output
+        run: echo "${{steps.meta.outputs.tags}}"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -87,4 +96,3 @@ jobs:
           context: build/${{ matrix.nginx }}/${{ matrix.os }}/${{ matrix.python }}
           tags: |
             ${{ steps.meta.outputs.tags }}
-

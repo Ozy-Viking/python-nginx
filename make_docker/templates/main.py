@@ -20,17 +20,10 @@ from make_docker.templates.base import FROM_TEMPLATE
 from make_docker.templates.base import LOCALE_FIX
 
 
-def validate_input(nginx, os, python):
-    if python == "all":
-        raise NotImplementedError(
-            "All is not implemented yet, please specify a python version."
-        )
-    if os == "all":
-        raise NotImplementedError("All is not implemented yet, please specify an OS.")
-    if nginx == "all":
-        raise NotImplementedError(
-            "All is not implemented yet, please specify a nginx version."
-        )
+def valid_input(*options: str):
+    if options in setting.INVALID_OPTIONS:  # type: ignore
+        return False
+    return True
 
 
 def generate_enumations(
@@ -39,11 +32,11 @@ def generate_enumations(
     nginx_options = setting.NGINX_ALL if nginx == "all" else [nginx]  # type: ignore
     os_options = setting.OS_ALL if os == "all" else [os]  # type: ignore
     python_options = setting.PYTHON_ALL if python == "all" else [python]  # type: ignore
-
     for i_n, nginx in enumerate(nginx_options):
         for i_o, os in enumerate(os_options):
             for i_p, python in enumerate(python_options):
-                yield (nginx, os, python)
+                if valid_input(nginx, os, python):
+                    yield nginx, os, python
 
 
 def main(*, nginx, os, python, **options) -> int:
@@ -62,7 +55,7 @@ def builder(nginx, os, python):
     make_folders(nginx, os, python)
 
     if setting.OS_MAP[os] == "debian":  # type: ignore
-        py_tag = f"{python}-{setting.DEBIAN_VERSION_MAP[nginx]}"  # type: ignore
+        py_tag = f"{python}-{os}"  # type: ignore
     elif setting.OS_MAP[os] == "alpine":  # type: ignore
         py_tag = f"{python}-alpine{setting.ALPINE_VERSION_MAP[nginx]}"  # type: ignore
     else:
@@ -93,10 +86,11 @@ def make_dockerfile(nginx, os, python, tag, **kwargs):
     dockerfile = Template(FROM_TEMPLATE).substitute(
         {"image": "python", "tag": tag, "name": "AS python-build"}
     )
-
+    
     dockerfile_folder = f"{nginx}/{os}/{python}"
     nginx_build_path = NGINX_BUILD / f"{nginx}/{setting.OS_MAP[os]}"  # type: ignore
     nginx_dockerfile_path = nginx_build_path / "Dockerfile"
+
     with open(nginx_dockerfile_path, "r") as f:
         nginx_dockerfile = f.readlines()
     cut_line_top = 0
