@@ -2,7 +2,7 @@
 
 [![Build and Publish Containers](https://github.com/Ozy-Viking/python-nginx/actions/workflows/build_container.yaml/badge.svg?branch=main)](https://github.com/Ozy-Viking/python-nginx/actions/workflows/build_container.yaml) ![GitHub](https://img.shields.io/github/license/Ozy-Viking/python-nginx) ![Static Badge](https://img.shields.io/badge/python%20-%203.9%20%7C%203.10%20%7C%203.11-blue) ![Static Badge](https://img.shields.io/badge/OS-bookworm%20%7C%20bullseye-darkred) ![Static Badge](https://img.shields.io/badge/nginx-mainline%20%7C%20stable-brightgreen)
 
-Pulls the docker files from nginx and then build it on a python image. Using uptodate images for both python and nginx.
+Pulls the docker files from nginx and then build it on a python image. Using up-to-date images for both python and nginx.
 
 Docker Hub: [ozyviking/python-nginx](https://hub.docker.com/r/ozyviking/python-nginx)
 GitHub Repo: [ozy-viking/python-nginix](https://github.com/Ozy-Viking/python-nginx)
