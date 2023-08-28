@@ -1,7 +1,7 @@
 services:
   website:
     build:
-      context: ../build/stable/bullseye/3.11
+      context: ../build/mainline/alpine/3.11
       dockerfile: Dockerfile
     ports:
       - 8000:80

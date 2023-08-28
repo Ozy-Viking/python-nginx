@@ -32,9 +32,9 @@ def generate_enumations(
     nginx_options = setting.NGINX_ALL if nginx == "all" else [nginx]  # type: ignore
     os_options = setting.OS_ALL if os == "all" else [os]  # type: ignore
     python_options = setting.PYTHON_ALL if python == "all" else [python]  # type: ignore
-    for i_n, nginx in enumerate(nginx_options):
-        for i_o, os in enumerate(os_options):
-            for i_p, python in enumerate(python_options):
+    for nginx in nginx_options:
+        for os in os_options:
+            for python in python_options:
                 if valid_input(nginx, os, python):
                     yield nginx, os, python
 
@@ -53,7 +53,6 @@ def main(*, nginx: str, os: str, python: str, **options) -> int:
 def builder(nginx: str, os: str, python: str):
     path = "/".join((nginx, os, python))
     make_folders(nginx, os, python)
-
     if setting.OS_MAP[os] == "debian":  # type: ignore
         py_tag = f"{python}-{os}"  # type: ignore
     elif setting.OS_MAP[os] == "alpine":  # type: ignore
@@ -89,9 +88,9 @@ def make_dockerfile(nginx: str, os: str, python: str, tag: str):
     )
 
     dockerfile_folder = f"{nginx}/{os}/{python}"
-    nginx_build_path = NGINX_BUILD / f"{nginx}/{setting.OS_MAP[os]}"  # type: ignore
+    nginx_build_path = NGINX_BUILD / f"{nginx}/{setting.OS_MAP[os]}{'-slim' if os == 'alpine' else ''}"  # type: ignore
     nginx_dockerfile_path = nginx_build_path / "Dockerfile"
-
+    
     with open(nginx_dockerfile_path, "r") as f:
         nginx_dockerfile = f.readlines()
     cut_line_top = 0
@@ -103,10 +102,25 @@ def make_dockerfile(nginx: str, os: str, python: str, tag: str):
         elif starts_with_list(line):
             cut_line_bottom.append(idx)
 
+
+    
     cut_line_bottom_idx = min(cut_line_bottom) if len(cut_line_bottom) else None
 
     dockerfile += "".join(nginx_dockerfile[cut_line_top + 1 : cut_line_bottom_idx])
-    dockerfile += LOCALE_FIX
+    
+    if os == 'alpine':
+        nginx_build_path = NGINX_BUILD / f"{nginx}/{setting.OS_MAP[os]}" # type: ignore
+        nginx_dockerfile_path = nginx_build_path / "Dockerfile"
+        with open(nginx_dockerfile_path, "r") as f:
+            nginx_dockerfile = f.readlines()   
+            
+        for idx, line in enumerate(nginx_dockerfile):
+            if starts_with_list(line, ["LABEL maintainer=", "FROM"]):
+                cut_line_top = idx
+                
+        dockerfile += "".join(nginx_dockerfile[cut_line_top + 1 : cut_line_bottom_idx])
+    else:
+        dockerfile += LOCALE_FIX
     dockerfile += ENDING
 
     with open((BUILD_PATH / dockerfile_folder) / "Dockerfile", "w") as f:
@@ -116,12 +130,13 @@ def make_dockerfile(nginx: str, os: str, python: str, tag: str):
 
 
 def copy_entrypoints(nginx: str, os: str, path: str | Path):
-    from_dir = (NGINX_BUILD / nginx) / setting.OS_MAP[os]  # type: ignore
+    from_dir = NGINX_BUILD / "entrypoint"  # type: ignore
     to_dir = BUILD_PATH / path
     entrypoints_re = re.compile(r"^((?!Dockerfile).*)$")
     ifiles = iglob("*", root_dir=str(from_dir))
     for file in [x for x in ifiles if entrypoints_re.match(x)]:
         shutil.copyfile(from_dir / file, to_dir / file)
+
 
 
 def copy_default_html(path: str | Path):
