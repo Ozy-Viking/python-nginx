@@ -12,7 +12,7 @@ from typing import Generator, Iterable
 from icecream import ic
 from loguru import logger
 
-from make_docker.conf import BUILD_PATH
+from make_docker.conf import BUILD_PATH, DEFAULT_HTML
 from make_docker.conf import NGINX_BUILD
 from make_docker.conf import setting
 from make_docker.templates.base import ENDING
@@ -39,7 +39,7 @@ def generate_enumations(
                     yield nginx, os, python
 
 
-def main(*, nginx, os, python, **options) -> int:
+def main(*, nginx: str, os: str, python: str, **options) -> int:
     try:
         # validate_input(nginx, os, python)
         generate_enumations(nginx, os, python)
@@ -50,7 +50,7 @@ def main(*, nginx, os, python, **options) -> int:
     return 0
 
 
-def builder(nginx, os, python):
+def builder(nginx: str, os: str, python: str):
     path = "/".join((nginx, os, python))
     make_folders(nginx, os, python)
 
@@ -65,9 +65,10 @@ def builder(nginx, os, python):
 
     make_dockerfile(nginx, os, python, py_tag)
     copy_entrypoints(nginx, os, path)
+    copy_default_html(path)
 
 
-def make_folders(nginx, os, python):
+def make_folders(nginx: str, os: str, python: str):
     folder_path: Path = ((BUILD_PATH / nginx) / os) / python
     folder_path.mkdir(exist_ok=True, parents=True)
 
@@ -81,12 +82,12 @@ def starts_with_list(
     return False
 
 
-def make_dockerfile(nginx, os, python, tag, **kwargs):
+def make_dockerfile(nginx: str, os: str, python: str, tag: str):
     dockerfile: str = ""
     dockerfile = Template(FROM_TEMPLATE).substitute(
         {"image": "python", "tag": tag, "name": "AS python-build"}
     )
-    
+
     dockerfile_folder = f"{nginx}/{os}/{python}"
     nginx_build_path = NGINX_BUILD / f"{nginx}/{setting.OS_MAP[os]}"  # type: ignore
     nginx_dockerfile_path = nginx_build_path / "Dockerfile"
@@ -114,12 +115,20 @@ def make_dockerfile(nginx, os, python, tag, **kwargs):
     logger.success(f"{dockerfile_folder} Dockerfile made.")
 
 
-def copy_entrypoints(nginx, os, path):
+def copy_entrypoints(nginx: str, os: str, path: str | Path):
     from_dir = (NGINX_BUILD / nginx) / setting.OS_MAP[os]  # type: ignore
     to_dir = BUILD_PATH / path
     entrypoints_re = re.compile(r"^((?!Dockerfile).*)$")
     ifiles = iglob("*", root_dir=str(from_dir))
     for file in [x for x in ifiles if entrypoints_re.match(x)]:
+        shutil.copyfile(from_dir / file, to_dir / file)
+
+
+def copy_default_html(path: str | Path):
+    from_dir = DEFAULT_HTML
+    to_dir = BUILD_PATH / path
+    ifiles = iglob("*", root_dir=str(from_dir))
+    for file in ifiles:
         shutil.copyfile(from_dir / file, to_dir / file)
 
 

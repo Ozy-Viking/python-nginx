@@ -1,3 +1,5 @@
+from ..conf import BASE_PATH
+
 FROM_TEMPLATE = """\
 FROM $image:$tag $name
 
@@ -20,9 +22,20 @@ RUN apt-get update \\
 ENV LC_ALL=en_US.UTF-8 \\
     LANG=en_US.UTF-8 \\
     LANGUAGE=en_US.UTF-8
+
 """
 
-ENDING = """
+ENDING = f"""
+
+RUN chmod ug+x /docker-entrypoint.sh \\
+    && chown root:www-data /docker-entrypoint.sh \\
+    && chmod -R ug+x /docker-entrypoint.d \\
+    && chown -R root:www-data /docker-entrypoint.d
+
+COPY *.html /usr/share/nginx/html/
+    
+USER root
+
 EXPOSE 80
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

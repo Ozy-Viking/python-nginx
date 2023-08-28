@@ -29,10 +29,12 @@ setting = Setting()
 BASE_PATH: Path = Path(__file__).parent.parent.parent
 BUILD_PATH: Path = BASE_PATH / "build"
 NGINX_BUILD: Path = BUILD_PATH / "nginx"
+DEFAULT_HTML: Path = BUILD_PATH.parent / "default-html"
 
 __all__: list[str] = [
     "BASE_PATH",
     "BUILD_PATH",
     "NGINX_BUILD",
+    "DEFAULT_HTML",
     "setting",
 ]
